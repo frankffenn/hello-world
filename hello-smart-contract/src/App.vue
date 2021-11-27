@@ -18,12 +18,16 @@
 
 <script>
 import { ethers, providers } from "ethers";
-import Greeter  from "../artifacts/contracts/Greeter.sol/Greeter.json"
+import Greeter  from "../artifacts/contracts/Greeter.sol/Greeter.json";
+import {toRefs} from 'vue';
 export default {
   name: "App",
   components: {},
   setup() {
-    let greetting = ""
+    const data = {
+      greetting: '',
+    }
+    
     const greetAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Contract Address
 
     async function requestAccount() {
@@ -33,7 +37,7 @@ export default {
     async function fetchGreeting() {
       if (typeof window.ethereum !== "undefined") {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const contract = ethers.Contract(
+        const contract = new ethers.Contract(
           greetAddress,
           Greeter.abi, 
           provider,
@@ -51,20 +55,20 @@ export default {
     }
 
     async function setGreeting() {
-      if (!greetting) return
+      if (!data.greetting) return
       if (typeof window.ethereum !== "undefined") {
          await requestAccount()
          const  provider = new ethers.providers.Web3Provider(window.ethereum);
-         const signer = providers.getSigner();
+         const signer = provider.getSigner();
          const contract = new ethers.Contract(greetAddress, Greeter.abi, signer);
-         const transaction = await contract.setGreeting(greetting);
+         const transaction = await contract.setGreeting(data.greetting);
          await transaction.wait()
          fetchGreeting()
       }
     }
 
     return {
-      ...toRefs(greetting),
+      ...toRefs(data),
       requestAccount,
       fetchGreeting,
       setGreeting,
