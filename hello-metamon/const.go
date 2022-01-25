@@ -324,6 +324,8 @@ type Monster struct {
 	ExpMax  int64  `json:"expMax"`
 	Update  bool   `json:"monsterUpdate"`
 	Tear    int64  `json:"tear"`
+	Owner   string `json:"owner"`
+	Level   int64  `json:"level"`
 }
 
 type MonsterObject struct {

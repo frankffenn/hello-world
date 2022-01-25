@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,12 +20,10 @@ import (
 )
 
 type Metamon struct {
-	address     string
-	metamonId   string
-	privateKey  string
-	battleLevel string
-	c           *resty.Client
-	backoff     Backoff
+	address    string
+	privateKey string
+	c          *resty.Client
+	backoff    Backoff
 }
 
 type Backoff struct {
@@ -50,13 +49,16 @@ func (b *Backoff) next(attempt int) time.Duration {
 }
 
 func New(privateKey string) *Metamon {
+	address, err := getPublicKey(privateKey)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("login wallet address:", address)
 	return &Metamon{
-		address:     "0xe003b2fb03f3126347afdbba460ed39e57f9588d",
-		metamonId:   "947068",
-		battleLevel: "2",
-		privateKey:  privateKey,
-		c:           resty.New(),
-		backoff:     Backoff{maxDelay: 5 * time.Second, minDelay: 2 * time.Second},
+		address:    address,
+		privateKey: privateKey,
+		c:          resty.New(),
+		backoff:    Backoff{maxDelay: 5 * time.Second, minDelay: 2 * time.Second},
 	}
 }
 
@@ -124,11 +126,11 @@ func (m *Metamon) setHeaders(token string) {
 	m.c = m.c.SetHeaders(headers)
 }
 
-func (m *Metamon) GetObjects() ([]*Monster, error) {
+func (m *Metamon) GetObjects(address, metamonId, battleLevel string) ([]*Monster, error) {
 	params := map[string]string{
-		"address":   m.address,
-		"metamonId": m.metamonId,
-		"front":     m.battleLevel,
+		"address":   address,
+		"metamonId": metamonId,
+		"front":     battleLevel,
 	}
 
 	resp, err := m.c.R().SetQueryParams(params).Post(getObjectURL)
@@ -148,10 +150,10 @@ func (m *Metamon) GetObjects() ([]*Monster, error) {
 	return out.Objects, nil
 }
 
-func (m *Metamon) StartPay(from, to string) error {
+func (m *Metamon) StartPay(from, to, battleLevel string) error {
 	params := map[string]string{
 		"address":     m.address,
-		"battleLevel": m.battleLevel,
+		"battleLevel": battleLevel,
 		"monsterA":    from,
 		"monsterB":    to,
 	}
@@ -180,10 +182,10 @@ func (m *Metamon) StartPay(from, to string) error {
 	return nil
 }
 
-func (m *Metamon) StartBattle(from, to string) error {
+func (m *Metamon) StartBattle(from, to, battleLevel string) error {
 	params := map[string]string{
 		"address":     m.address,
-		"battleLevel": m.battleLevel,
+		"battleLevel": battleLevel,
 		"monsterA":    from,
 		"monsterB":    to,
 	}
@@ -251,9 +253,41 @@ func decodeResponse(in []byte, out interface{}) error {
 	return nil
 }
 
+func getPublicKey(pk string) (string, error) {
+	bytes, err := hexutil.Decode(fmt.Sprintf("0x%s", pk))
+	if err != nil {
+		return "", err
+	}
+
+	privateKey, err := crypto.ToECDSA(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return "", errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+	}
+
+	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+	return address, nil
+}
+
+func getBattleLevel(level int64) string {
+	if level < 21 {
+		return "1"
+	} else if level >= 21 && level < 41 {
+		return "2"
+	} else {
+		return "3"
+	}
+}
+
 func main() {
 	msg := fmt.Sprintf("LogIn-%s", uuid.New())
 	m := New(os.Getenv("WALLET_PRIVATE_KEY"))
+
 	sign, err := m.sign(msg)
 	if err != nil {
 		log.Fatalln("sign: ", err)
@@ -264,18 +298,6 @@ func main() {
 		log.Fatalf("login: %v", err)
 	}
 
-	monsters, err := m.GetObjects()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	sort.Slice(monsters, func(i, j int) bool {
-		return monsters[i].Sca < monsters[j].Sca
-	})
-
-	best := monsters[0]
-	log.Printf("The weakest monster: Id: %s, Rarity:%s, Sca: %d", best.TokenId, best.Rarity, best.Sca)
-
 	myMonsters, err := m.getWalletProperty()
 	if err != nil {
 		log.Fatalln("get monster failed: ", err)
@@ -284,15 +306,28 @@ func main() {
 
 	for _, monster := range myMonsters {
 		for i := 0; i < int(monster.Tear); i++ {
-			if err := m.StartPay(m.metamonId, best.Id); err != nil {
+			battleLevel := getBattleLevel(monster.Level)
+			monsters, err := m.GetObjects(monster.Owner, monster.Id, battleLevel)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			sort.Slice(monsters, func(i, j int) bool {
+				return monsters[i].Sca < monsters[j].Sca
+			})
+
+			best := monsters[0]
+			log.Printf("The weakest monster: Id: %s, Rarity:%s, Sca: %d", best.TokenId, best.Rarity, best.Sca)
+
+			time.Sleep(m.backoff.next(i))
+
+			if err := m.StartPay(monster.Id, best.Id, battleLevel); err != nil {
 				log.Fatalln("start pay failed: ", err)
 			}
 
-			if err := m.StartBattle(m.metamonId, best.Id); err != nil {
+			if err := m.StartBattle(monster.Id, best.Id, battleLevel); err != nil {
 				log.Fatalln("start battle failed:", err)
 			}
-
-			time.Sleep(m.backoff.next(i))
 		}
 	}
 }
