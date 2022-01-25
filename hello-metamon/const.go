@@ -1,6 +1,11 @@
 package main
 
 const (
+	//address: 0xe003b2fb03f3126347afdbba460ed39e57f9588d
+	//sign: 0xd82e41034dc9875d8090006af62b295ecf961febefec557ec3675c59a437e0cf2c653d5ecd02164b7e25ce158ca005eea176041cbb9eb958594c30e4652065ad1c
+	//msg: LogIn-4a20c27e-fee7-a053-2980-4c039ccc23d9
+	//network: 1
+	loginURL     = "https://metamon-api.radiocaca.com/usm-api/login"
 	getObjectURL = "https://metamon-api.radiocaca.com/usm-api/getBattelObjects"
 	// address: 0xe003b2fb03f3126347afdbba460ed39e57f9588d
 	// battleLevel: 2

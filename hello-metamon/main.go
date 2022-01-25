@@ -3,11 +3,17 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/go-resty/resty/v2"
+	"github.com/google/uuid"
 	"log"
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
 	"sort"
 	"time"
 )
@@ -54,10 +60,65 @@ func New(privateKey string) *Metamon {
 	}
 }
 
-func (m *Metamon) setHeaders() {
+func prefixHash(data []byte) common.Hash {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	return crypto.Keccak256Hash([]byte(msg))
+}
+
+func (m *Metamon) sign(msg string) (string, error) {
+	privateKey, err := crypto.HexToECDSA(m.privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	data := []byte(msg)
+	hash := prefixHash(data)
+
+	signature, err := crypto.Sign(hash.Bytes(), privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	// https://stackoverflow.com/questions/69762108/implementing-ethereum-personal-sign-eip-191-from-go-ethereum-gives-different-s
+	signature[64] += 27
+
+	return hexutil.Encode(signature), nil
+}
+
+func (m *Metamon) Login(sign, msg string) error {
+	params := map[string]string{
+		"address": m.address,
+		"sign":    sign,
+		"msg":     msg,
+		"network": "1",
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(loginURL)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return errors.New("response err")
+	}
+
+	var ret Response
+	if err := json.Unmarshal(resp.Body(), &ret); err != nil {
+		return err
+	}
+
+	log.Println(ret)
+
+	token := ret.Data.(string)
+	m.setHeaders(token)
+
+	return nil
+}
+
+func (m *Metamon) setHeaders(token string) {
 	headers := map[string]string{
 		"content-type": "multipart/form-data; boundary=----WebKitFormBoundaryBoisGGEqBQMlOG7a",
-		"accesstoken":  "DO0B5JH9ppIwgh9lNPq4Qw==",
+		"accesstoken":  token,
 		"user_agent":   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36",
 	}
 	m.c = m.c.SetHeaders(headers)
@@ -191,8 +252,17 @@ func decodeResponse(in []byte, out interface{}) error {
 }
 
 func main() {
-	m := New("123")
-	m.setHeaders()
+	msg := fmt.Sprintf("LogIn-%s", uuid.New())
+	m := New(os.Getenv("WALLET_PRIVATE_KEY"))
+	sign, err := m.sign(msg)
+	if err != nil {
+		log.Fatalln("sign: ", err)
+		return
+	}
+
+	if err := m.Login(sign, msg); err != nil {
+		log.Fatalf("login: %v", err)
+	}
 
 	monsters, err := m.GetObjects()
 	if err != nil {
@@ -204,7 +274,7 @@ func main() {
 	})
 
 	best := monsters[0]
-	log.Printf("battle monster: Id: %s, Rarity:%s, Sca: %d", best.TokenId, best.Rarity, best.Sca)
+	log.Printf("The weakest monster: Id: %s, Rarity:%s, Sca: %d", best.TokenId, best.Rarity, best.Sca)
 
 	myMonsters, err := m.getWalletProperty()
 	if err != nil {
