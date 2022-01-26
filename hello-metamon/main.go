@@ -284,6 +284,30 @@ func getBattleLevel(level int64) string {
 	}
 }
 
+func (m *Metamon) UpdateMonster(monsterId string) error {
+	params := map[string]string{
+		"nftId":   monsterId,
+		"address": m.address,
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(updateMonsterURL)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return errors.New("response err")
+	}
+
+	var ret Response
+	if err := json.Unmarshal(resp.Body(), &ret); err != nil {
+		return err
+	}
+
+	log.Println("update monster: ", ret.Code)
+	return nil
+}
+
 func main() {
 	msg := fmt.Sprintf("LogIn-%s", uuid.New())
 	m := New(os.Getenv("WALLET_PRIVATE_KEY"))
@@ -305,6 +329,12 @@ func main() {
 	}
 
 	for _, monster := range myMonsters {
+		if monster.Update {
+			if err := m.UpdateMonster(monster.Id); err != nil {
+				log.Println(err)
+			}
+		}
+
 		for i := 0; i < int(monster.Tear); i++ {
 			battleLevel := getBattleLevel(monster.Level)
 			monsters, err := m.GetObjects(monster.Owner, monster.Id, battleLevel)

@@ -270,6 +270,16 @@ const (
 	//	"result":1
 	//}
 	getWalletPropertyList = "https://metamon-api.radiocaca.com/usm-api/getWalletPropertyList"
+	//nftId: 947068
+	//address: 0xe003b2fb03f3126347afdbba460ed39e57f9588d
+	//resp
+	//{
+	//	"code":"SUCCESS",
+	//	"data":null,
+	//	"message":"",
+	//	"result":1
+	//}
+	updateMonsterURL = "https://metamon-api.radiocaca.com/usm-api/updateMonster"
 )
 
 type Response struct {
