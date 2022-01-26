@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -182,7 +183,7 @@ func (m *Metamon) StartPay(from, to, battleLevel string) error {
 	return nil
 }
 
-func (m *Metamon) StartBattle(from, to, battleLevel string) error {
+func (m *Metamon) StartBattle(from, to, battleLevel string) (*BattleResult, error) {
 	params := map[string]string{
 		"address":     m.address,
 		"battleLevel": battleLevel,
@@ -192,20 +193,19 @@ func (m *Metamon) StartBattle(from, to, battleLevel string) error {
 
 	resp, err := m.c.R().SetQueryParams(params).Post(startBattleURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return errors.New("response err")
+		return nil, errors.New("response err")
 	}
 
 	var ret BattleResult
 	if err := decodeResponse(resp.Body(), &ret); err != nil {
-		return err
+		return nil, err
 	}
 
-	log.Printf("battle result: isWin: %t fragmentNum: %d  EXP: %d \n", ret.ChallengeResult, ret.BpFragmentNum, ret.ChallengeExp)
-	return nil
+	return &ret, nil
 }
 
 func (m *Metamon) getWalletProperty() ([]*Monster, error) {
@@ -308,6 +308,57 @@ func (m *Metamon) UpdateMonster(monsterId string) error {
 	return nil
 }
 
+func (m *Metamon) GetBag() ([]*BagItem, error) {
+	params := map[string]string{
+		"address": m.address,
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(checkBagURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, errors.New("response err")
+	}
+
+	var ret Bag
+	if err := decodeResponse(resp.Body(), &ret); err != nil {
+		return nil, err
+	}
+
+	return ret.Item, nil
+}
+
+func (m *Metamon) mint() error {
+	// todo
+	return nil
+}
+
+func (m *Metamon) Mint() error {
+	bagItems, err := m.GetBag()
+	if err != nil {
+		return err
+	}
+
+	for _, item := range bagItems {
+		if item.Type != 1 {
+			continue
+		}
+
+		num, _ := strconv.Atoi(item.Number)
+		if num < 1000 {
+			return nil
+		}
+
+		if err := m.mint(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	msg := fmt.Sprintf("LogIn-%s", uuid.New())
 	m := New(os.Getenv("WALLET_PRIVATE_KEY"))
@@ -335,6 +386,8 @@ func main() {
 			}
 		}
 
+		var winCount int64
+
 		for i := 0; i < int(monster.Tear); i++ {
 			battleLevel := getBattleLevel(monster.Level)
 			monsters, err := m.GetObjects(monster.Owner, monster.Id, battleLevel)
@@ -355,9 +408,18 @@ func main() {
 				log.Fatalln("start pay failed: ", err)
 			}
 
-			if err := m.StartBattle(monster.Id, best.Id, battleLevel); err != nil {
+			ret, err := m.StartBattle(monster.Id, best.Id, battleLevel)
+			if err != nil {
 				log.Fatalln("start battle failed:", err)
 			}
+
+			if ret.ChallengeResult {
+				winCount++
+			}
+
+			log.Printf("battle result: isWin: %t fragmentNum: %d  EXP: %d \n", ret.ChallengeResult, ret.BpFragmentNum, ret.ChallengeExp)
 		}
+
+		log.Printf("total battles: %d, win: %d, winRate:%d%% \n", monster.Tear, winCount, winCount*100/monster.Tear)
 	}
 }

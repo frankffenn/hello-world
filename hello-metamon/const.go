@@ -280,6 +280,50 @@ const (
 	//	"result":1
 	//}
 	updateMonsterURL = "https://metamon-api.radiocaca.com/usm-api/updateMonster"
+	//0xe003b2fb03f3126347afdbba460ed39e57f9588d
+	// resp
+	//"item":[
+	//			{
+	//				"bpNum":"1146",
+	//				"bpType":1,
+	//				"createTime":"2021-12-02 22:43:15",
+	//				"id":183592,
+	//				"owner":"0xe003b2fb03f3126347afdbba460ed39e57f9588d",
+	//				"updateTime":"2022-01-26 01:36:57"
+	//			},
+	//			{
+	//				"bpNum":"20",
+	//				"bpType":2,
+	//				"createTime":"2021-12-03 07:12:55",
+	//				"id":185961,
+	//				"owner":"0xe003b2fb03f3126347afdbba460ed39e57f9588d",
+	//				"updateTime":"2022-01-26 01:39:49"
+	//			},
+	//			{
+	//				"bpNum":"958",
+	//				"bpType":5,
+	//				"createTime":"2021-12-02 12:04:25",
+	//				"id":181025,
+	//				"owner":"0xe003b2fb03f3126347afdbba460ed39e57f9588d",
+	//				"updateTime":"2022-01-26 01:36:57"
+	//			},
+	//			{
+	//				"bpNum":"0",
+	//				"bpType":6,
+	//				"createTime":"2021-12-08 07:50:57",
+	//				"id":197245,
+	//				"owner":"0xe003b2fb03f3126347afdbba460ed39e57f9588d",
+	//				"updateTime":"2022-01-24 05:38:58"
+	//			},
+	//			{
+	//				"bpNum":"1",
+	//				"bpType":0,
+	//				"createTime":null,
+	//				"id":null,
+	//				"owner":"",
+	//				"updateTime":null
+	//			}
+	checkBagURL = "https://metamon-api.radiocaca.com/usm-api/checkBag"
 )
 
 type Response struct {
@@ -358,4 +402,15 @@ type BattleResult struct {
 	BpFragmentNum   int64 `json:"bpFragmentNum"`
 	ChallengeExp    int64 `json:"challengeExp"`
 	ChallengeLevel  int64 `json:"challengeLevel"`
+}
+
+type Bag struct {
+	Item []*BagItem `json:"item"`
+}
+
+type BagItem struct {
+	Number string `json:"bpNum"`
+	Type   int64  `json:"bpType"`
+	Id     int64  `json:"id"`
+	Owner  string `json:"owner"`
 }
