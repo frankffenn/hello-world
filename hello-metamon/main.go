@@ -59,7 +59,7 @@ func New(privateKey string) *Metamon {
 		address:    address,
 		privateKey: privateKey,
 		c:          resty.New(),
-		backoff:    Backoff{maxDelay: 5 * time.Second, minDelay: 2 * time.Second},
+		backoff:    Backoff{maxDelay: 3 * time.Second, minDelay: 1 * time.Second},
 	}
 }
 
@@ -331,7 +331,25 @@ func (m *Metamon) GetBag() ([]*BagItem, error) {
 }
 
 func (m *Metamon) mint() error {
-	// todo
+	params := map[string]string{
+		"address": m.address,
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(checkBagURL)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return errors.New("response err")
+	}
+
+	var ret Response
+	if err := json.Unmarshal(resp.Body(), &ret); err != nil {
+		return err
+	}
+
+	log.Println("mint egg result: ", ret.Code)
 	return nil
 }
 
@@ -421,5 +439,9 @@ func main() {
 		}
 
 		log.Printf("total battles: %d, win: %d, winRate:%d%% \n", monster.Tear, winCount, winCount*100/monster.Tear)
+	}
+
+	if err := m.Mint(); err != nil {
+		log.Printf("mint egg: %v\n", err)
 	}
 }

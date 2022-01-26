@@ -324,6 +324,8 @@ const (
 	//				"updateTime":null
 	//			}
 	checkBagURL = "https://metamon-api.radiocaca.com/usm-api/checkBag"
+
+	composeMonsterEggURL = "https://metamon-api.radiocaca.com/usm-api/composeMonsterEgg"
 )
 
 type Response struct {
@@ -332,43 +334,6 @@ type Response struct {
 	Message string      `json:"message"`
 }
 
-/*
-"con":97,
-"conMax":200,
-"createTime":"2021-10-31 00:34:41",
-"crg":51,
-"crgMax":100,
-"exp":26,
-"expMax":0,
-"id":"198455",
-"imageUrl":"https://racawebsource.s3.us-east-2.amazonaws.com/metamon/media/normal/Spirit-J1-4255.png",
-"inte":100,
-"inteMax":200,
-"inv":51,
-"invMax":100,
-"isPlay":false,
-"itemId":0,
-"itemNum":0,
-"lastOwner":"0xa148434a6bf43b9af92341ca9a88072d6eef2c0f",
-"level":27,
-"levelDiff":0,
-"levelMax":60,
-"life":100,
-"lifeLL":0,
-"luk":19,
-"lukMax":50,
-"monsterUpdate":false,
-"owner":"0xa148434a6bf43b9af92341ca9a88072d6eef2c0f",
-"race":"spirit",
-"rarity":"N",
-"sca":318,
-"scaMax":650,
-"status":0,
-"tear":20,
-"tokenId":"141494",
-"updateTime":"2022-01-24 18:00:10",
-"years":1
-*/
 type Monster struct {
 	Id      string `json:"id"`
 	TokenId string `json:"tokenId"`
