@@ -438,7 +438,9 @@ func main() {
 			log.Printf("battle result: isWin: %t fragmentNum: %d  EXP: %d \n", ret.ChallengeResult, ret.BpFragmentNum, ret.ChallengeExp)
 		}
 
-		log.Printf("total battles: %d, win: %d, winRate:%d%% \n", monster.Tear, winCount, winCount*100/monster.Tear)
+		if monster.Tear > 0 {
+			log.Printf("total battles: %d, win: %d, winRate:%d%% \n", monster.Tear, winCount, winCount*100/monster.Tear)
+		}
 	}
 
 	if err := m.Mint(); err != nil {
