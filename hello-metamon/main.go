@@ -335,7 +335,7 @@ func (m *Metamon) mint() error {
 		"address": m.address,
 	}
 
-	resp, err := m.c.R().SetQueryParams(params).Post(checkBagURL)
+	resp, err := m.c.R().SetQueryParams(params).Post(composeMonsterEggURL)
 	if err != nil {
 		return err
 	}
@@ -398,15 +398,17 @@ func main() {
 	}
 
 	for _, monster := range myMonsters {
-		if monster.Update {
-			if err := m.UpdateMonster(monster.Id); err != nil {
-				log.Println(err)
-			}
-		}
-
 		var winCount int64
 
+		exp := monster.Exp
+
 		for i := 0; i < int(monster.Tear); i++ {
+			if exp >= monster.ExpMax {
+				if err := m.UpdateMonster(monster.Id); err != nil {
+					log.Println(err)
+				}
+			}
+
 			battleLevel := getBattleLevel(monster.Level)
 			monsters, err := m.GetObjects(monster.Owner, monster.Id, battleLevel)
 			if err != nil {
@@ -434,6 +436,8 @@ func main() {
 			if ret.ChallengeResult {
 				winCount++
 			}
+
+			exp += ret.ChallengeExp
 
 			log.Printf("battle result: isWin: %t fragmentNum: %d  EXP: %d \n", ret.ChallengeResult, ret.BpFragmentNum, ret.ChallengeExp)
 		}
