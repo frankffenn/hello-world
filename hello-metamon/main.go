@@ -406,6 +406,8 @@ func main() {
 			if exp >= monster.ExpMax {
 				if err := m.UpdateMonster(monster.Id); err != nil {
 					log.Println(err)
+				} else {
+					exp = 0
 				}
 			}
 
