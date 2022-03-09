@@ -334,6 +334,16 @@ type Response struct {
 	Message string      `json:"message"`
 }
 
+type LoginRes struct {
+	AccessToken  string `json:"accessToken"`
+	Address      string `json:"address"`
+	Network      int64  `json:"network"`
+	VerifyEmail  string `json:"verifyEmail"`
+	VerifyResult bool   `json:"verifyResult"`
+	VerifyShow   bool   `json:"verifyShow"`
+	VerifyStatus bool   `json:"verifyStatus"`
+}
+
 type Monster struct {
 	Id      string `json:"id"`
 	TokenId string `json:"tokenId"`

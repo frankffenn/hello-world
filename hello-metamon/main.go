@@ -5,11 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/go-resty/resty/v2"
-	"github.com/google/uuid"
 	"log"
 	"math"
 	"math/rand"
@@ -18,6 +13,12 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/go-resty/resty/v2"
+	"github.com/google/uuid"
 )
 
 type Metamon struct {
@@ -105,15 +106,14 @@ func (m *Metamon) Login(sign, msg string) error {
 		return errors.New("response err")
 	}
 
-	var ret Response
-	if err := json.Unmarshal(resp.Body(), &ret); err != nil {
+	var out LoginRes
+	if err := decodeResponse(resp.Body(), &out); err != nil {
 		return err
 	}
 
-	log.Println(ret)
+	log.Println(out)
 
-	token := ret.Data.(string)
-	m.setHeaders(token)
+	m.setHeaders(out.AccessToken)
 
 	return nil
 }
@@ -422,7 +422,7 @@ func main() {
 			})
 
 			best := monsters[0]
-			log.Printf("The weakest monster: Id: %s, Rarity:%s, Sca: %d", best.TokenId, best.Rarity, best.Sca)
+			log.Printf("The weakest monster: Id: %s, Rarity:%s, Sca: %d, LV: %s", best.TokenId, best.Rarity, best.Sca, battleLevel)
 
 			time.Sleep(m.backoff.next(i))
 
