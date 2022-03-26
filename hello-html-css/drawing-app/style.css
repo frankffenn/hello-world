@@ -1,0 +1,45 @@
+body {
+    font-family:"sans-serif";
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    flex-direction: column;
+    background-color: pink;
+}
+
+h1 {
+    font-family: inherit;
+    color: white;
+    opacity: 0.6;
+    font-weight: bold;
+}
+
+canvas {
+    background: #f5f5f5;
+}
+
+.toolbox {
+    width: 500px;
+    padding: 10px 2px;
+    display: flex;
+    justify-content: center;
+}
+
+.toolbox > * {
+    border: none;
+    font-size: 18px;
+    padding: 0.25rem;
+    margin: 5px 10px;
+    width: 40px;
+    height: 40px;
+    background-color: white;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 5px;
+}
+
+.toolbox > *:last-child {
+    margin-right: 30px;
+}
