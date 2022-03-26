@@ -1,0 +1,44 @@
+<html>
+<header>
+    <title> Password Generator </title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+</header>
+
+<body>
+    <div class="container">
+       <!-- <h1>Generate Password</h1> -->
+       <div class="header">
+        <div class="result" id="result"> sdfas@#sdfs272s</div>
+        <div class="pwd">
+            <button id="copy">Copied!</button>
+        </div>
+       </div>
+       <div class="body">
+        <div class="form">
+            <label>Container Uppercase Letter</label>
+            <input type="checkbox" id="upper" checked>
+        </div>
+        <div class="form">
+            <label>Container Lowercase Letter</label>
+            <input type="checkbox" id="lower" checked>
+        </div>
+        <div class="form">
+            <label>Container Number Letter</label>
+            <input type="checkbox" id="number" checked>
+        </div>
+        <div class="form">
+            <label>Container Symbol</label>
+            <input type="checkbox" id="symbol" checked>
+        </div>
+       </div>
+       <button class="generate" id="generate">
+           Generate
+       </button>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+
+</html>
