@@ -1,0 +1,42 @@
+body {
+    background-color: #292c35;
+    margin: 0;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    display: flex;
+}
+
+.loading {
+    display: flex;
+}
+
+/* :nth-of-type 针对具有一组兄弟节点的标签*/
+.circle:nth-of-type(2n) {
+    animation-delay: 0.1s;
+}
+
+.circle:nth-of-type(3n) {
+    animation-delay: 0.2s;
+}
+
+.circle {
+    width: 10px;
+    height: 10px;
+    background-color: white;
+    border-radius: 5px;
+    margin: 3px;
+    /* @keyframes duration | timing-function | delay | name */
+    animation: jump 0.5s ease-in infinite;
+}
+
+/*关键帧 keyframes 可以控制动画序列的中间步骤 from(0%) - to(100%)*/
+@keyframes jump {
+    0% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
