@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;500&display=swap');
+
+body {
+    background-color: #d9e4f5;
+    background-image: linear-gradient(315deg, #d9e4f5 0%, #f5e3e6 74%);
+    margin: 0;
+    overflow: hidden;
+    font-family:'Open Sans';
+    width: 100%;
+}
+
+
+h1 {
+    /* display: none; */
+    font-size: 10vw;
+    font-weight: bold;
+    width: 100%;
+    position: absolute;
+    /*
+        left: 50%;
+        top: 50%;
+        整个组件移到父组件中间
+        transform: translate(-50%, -50%);
+        以自身为对照点移动百分比
+    */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -100%);
+    text-align: center;
+}
+
+.line {
+    background-color: white;
+    width: 10vh;
+    height: 3vh;
+    border-radius: 10px;
+    position: absolute;
+    left: -1vh;
+    top: 50%;
+    transform: translateY(50%);
+    animation: grow 3s linear forwards;
+    z-index: 2;
+}
+
+@keyframes grow {
+    to {
+        width: 102vw;
+    }
+}
+
+.overlay {
+    z-index:2;
+}
