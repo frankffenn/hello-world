@@ -1,0 +1,72 @@
+@import url(../font-awesome/css/font-awesome.min.css);
+
+/* box-sizing: border-box; 使 width 计算包含 padding ，否则 width 的实际宽度是 width + padding*/
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+body.dark {
+    background-color: #292c35;
+}
+
+input {
+    opacity: 0;
+}
+
+/*
+ 基本选择器:
+ *, elementname, # , .
+ 组合器（Combinators):
+    空格 组合器选择前一个元素的后代节点。
+    > 组合器选择前一个元素的直接子代的节点。
+    ~ 组合器选择兄弟元素, 即后一个节点在前一个节点后面的任意位置
+    + 组合器选择相邻元素，即后一个元素紧跟在前一个之后
+    || 组合器选择属于某个表格行的节点
+伪选择器（Pseudo）:
+    : 伪选择器支持按照未被包含在文档树中的状态信息来选择元素
+    :: 伪选择器用于表示无法用 HTML 语义表达的实体。
+*/
+.checkbox:checked + .label .ball {
+    transform: translateX(17px);
+}
+
+
+.label {
+    background-color: #54d564;
+    width: 40px;
+    height: 20px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px;
+    transform: scale(1.5);
+    /* box-shadow: 0 0px 4px rgb(0, 0, 0, 0.3); */
+}
+
+
+.fa{
+    width: 16px;
+    height: 16px;
+    color: white;
+}
+
+.ball {
+    background-color: white;
+    width: 18px;
+    height: 18px;
+    position: absolute;
+    border-radius: 50px;
+    transform: translateX(-1px);
+    box-shadow: 0 0 3px -5px rgb(0, 0, 0, 0.3), 0 2px 5px rgb(0, 0, 0, 0.3);
+    transition: transform 0.2s linear;
+}
