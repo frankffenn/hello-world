@@ -1,0 +1,38 @@
+.bg {
+    width: 400px;
+    height: 300px;
+    background-repeat: no-repeat;
+    /* 图片缩放 */
+    background-size: cover;
+    /* 图片的位置 */
+    background-position: bottom center; 
+    margin: 50px auto;
+    background-image: url("https://www.nps.gov/common/uploads/cropped_image/primary/E2D45333-CFE3-69EF-36B109EE41BEC208.jpg?width=1600&quality=90&mode=crop");
+    box-shadow: 0 20px 45px rgb(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.bg::after {
+    background-image: inherit;
+    position: absolute;
+    background-size: inherit;
+    background-position: inherit;
+    width: 400px;
+    height: 300px;
+    bottom: -101%;
+    transform: rotateX(180deg);
+    content: '';
+}
+
+.bg::before {
+    /* 从上到下，  #ffffff, 60% -> #ffffff 100% 渐变*/
+    background-image: linear-gradient(to bottom, rgba(255,255,255,0.2), #ffffff, 60%, #ffffff);
+    content: '';
+    position: absolute;
+    background-size: inherit;
+    background-position: inherit;
+    width: 400px;
+    height: 300px;
+    z-index: 2;
+    bottom: -101%;
+}
