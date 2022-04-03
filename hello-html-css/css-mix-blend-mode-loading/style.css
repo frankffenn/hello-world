@@ -1,0 +1,46 @@
+
+
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+
+.loading-container {
+    background-color: black;
+    border: 3px solid;
+    padding: 10px;
+    width: 400px;
+    text-align: center;
+    text-transform: uppercase;
+    position: relative;
+}
+
+.loading-container::after {
+    position: absolute;
+    background-color: #fff;
+    content: '';
+    /* 背景色和字体颜色相反 */
+    mix-blend-mode: difference;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+    /* 相同的 container 然后从0变1，加上动画就有 loading 效果 */
+    transform: scaleX(0);
+    transform-origin: center left;
+    animation: grow 5s linear infinite;
+}
+
+@keyframes grow {
+    to {
+        transform: scaleX(1);
+    }
+}
+
+h1 {
+    color: white;
+}
