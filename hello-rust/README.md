@@ -12,7 +12,7 @@
   - [格式化](#格式化)
   - [原始类型](#原始类型)
   - [文字和表达类型](#文字和表达类型)  
-  - [方法](#方法)
+  - [关联函数和方法](#关联函数和方法)
   - [自定义类型](#自定义类型)
   - [枚举类型](#enums-枚举类型)
   - [类型别名](#类型别名-type-aliases)
@@ -23,10 +23,8 @@
   - [TryFrom和TryInto特性](#tryfrom-和-tryinto-特性) 
   - [字符串转换和解析](#字符串转换和解析) 
   - [流控制](#流控制) 
-  - [类型转换](#类型转换) 
-  - [类型转换](#类型转换) 
-  - [类型转换](#类型转换)                        
-
+  - [闭包](#闭包)                       
+  - [模块](#模块)
 
 ## 安装
 
@@ -194,6 +192,19 @@ fn analyze_slice(slice: &[i32]){
 }
 ```
 
+### 赋值
+```
+let color = String::from("red");
+
+// 这种是拷贝引用，地址相同
+let _reborrow = &color;
+
+// 这种是删除了 color 变量，创建一个新的 _remove 变量，内存地址和值保留不变。
+// 删除之后，color 变量就无法再使用了。
+let _remove = color;
+
+```
+
 ### 文字和表达类型
 - 0x 十六进制
 - 0o 八进制
@@ -249,6 +260,8 @@ impl Cat {
 
 fn main() {
     let cat = Cat::new();
+
+    // cat.say() 等同于 Cat::say(cat);
     println!("{}", cat.say());
 }
 ```
@@ -448,7 +461,13 @@ fn main(){
 
 ### 字符串转换和解析
 
-只要实现了 `fmt::Display` 特性，就可以调用 `to_string` 的方法
+只要实现了 `fmt::Display` 特性，就可以调用 `to_string` 的方法,      
+四种转成字符串的方法，效率差不多 
+ - String::from("str")
+ - "str".to_string()
+ - "str".into()
+ - "str".to_owned()
+
 ```
 use std::fmt;
 
@@ -567,5 +586,229 @@ fn main(){
         n @ 13..=19 => println!("13-19"),
         n => println!("rest"),
     }
+}
+```
+### 闭包
+闭包也是一个函数，闭包使用 || 来包裹参数， 可以不用指定参数和返回值类型会自动推断。
+```
+fn function(i:i32) -> i32 {i+1};
+
+// 可以省略函数名
+let closure_annotated = |i:32| -> i32 {i+1};
+// 省略函数名和参数返回值类型
+let closure_inffered = |i| -> i+1;
+
+// 调用方式
+println!("result:{}", function(1));
+println!("result:{}", closure_annotated(2));
+println!("result:{}", closure_inffered(3));
+
+// 没有参数的闭包函数
+let one = || 1;
+println!("closure returning one: {}", one());
+```
+
+当闭包函数当做参数传递时，为了避免歧义，必须使用下面的特性：            
+- `Fn`  使用引用变量
+- `FnMut`  使用可修改变量
+- `FnOnce` 使用值变量
+       
+定义闭包时，编译器会隐式创建一个新的匿名结构来将捕获的变量存储在其中,同时通过以下特征之一实现功能：对于这种未知类型的 Fn、FnMut 或 FnOnce。这种类型被分配给在调用之前存储的变量。
+
+由于这种新类型是未知类型，因此函数中的任何用法都需要泛型。但是，无界类型参数 <T> 仍然是模棱两可的，并且是不允许的。因此，受以下特征之一的限制：Fn、FnMut 或 FnOnce（它实现）足以指定其类型。
+
+```
+// 必须实现闭包函数 F 的 `Fn`方法
+fn apply<F>(f: F) where
+    F: Fn() {
+    f();
+}
+
+// 定义一个接受通用 `F` 参数的函数,以 `Fn` 为界，并调用它
+// 意思是这个 call_me 的函数只能被 <F:　Fn()> 这类的函数调用，包括闭包和普通函数
+// 是上面的简单写法
+fn call_me<F: Fn()>(f: F) {
+    f()
+}
+
+// 定义一个函数
+fn function() {
+    println!("here is a function");
+}
+
+fn main() {
+    let x = 7;
+    let print = || println!("{}", x);
+
+    apply(print);       // 7
+    // 闭包可以当成参数传递
+    call_me(print);     // 7
+    // 函数也可以当成参数传递
+    call_me(function);  // here is a function
+}
+```
+
+闭包当返回值返回，使用`impl`关键字和 `Fn`, `FnMut`, `FnOnce` 三种特性，同时必须使用 move 关键字，这表明所有捕获都按值发生。这是必需的，因为一旦函数退出，任何通过引用进行的捕获都会被丢弃，从而在闭包中留下无效的引用。
+
+```
+// 闭包当返回值, Fn特性还可以是 FnMut, FnOnce
+fn create() -> impl Fn() {
+    let text = "Fn".to_owned();
+    move || println!("this is a:{}", text)
+}
+
+fn main() {
+    let ret = create();
+    ret();
+}
+```
+#### 高级函数
+更多细节待补充      
+```
+// Functional approach
+let sum_of_squared_odd_numbers: u32 =
+    (0..).map(|n| n * n)                        // All natural numbers squared
+    .take_while(|&n_squared| n_squared < upper) // Below upper limit
+    .filter(|&n_squared| is_odd(n_squared))     // That are odd
+    .fold(0, |acc, n_squared| acc + n_squared); // Sum them
+println!("functional style: {}", sum_of_squared_odd_numbers);
+```
+#### 发散函数
+发散的功能永远不会返回。它们使用 ! 标记，这是一个空类型。
+与所有其他类型相反，此类型无法实例化，因为此类型可以具有的所有可能值的集合都是空的。请注意，它与 () 类型不同，后者只有一个可能的值。
+```
+fn foo() -> ! {
+    panic!("This call never returns.");
+}
+```
+
+还有 continue， exit() 之类的，不会返回任何东西。
+
+### 模块
+Rust 提供了一个强大的模块系统，可用于将代码分层拆分为逻辑单元（模块），并管理它们之间的可见性（公共/私有）。
+
+#### 可视化
+```
+// 定义一个 my_mod 的模块
+mod my_mod {
+    // 默认是私有的方法
+    fn private_function() {
+        println!("called my_mod::private_function");
+    }
+
+    // 可以使用 pub 关键字重写成为公开的
+    pub fn function(){
+        println!("called my_mod::function");
+    }
+
+    // 可以访问同个模块下的项目，包括私有的
+    pub fn indirect_access() {
+        println!("called my_mod:: indirect_access");
+        private_function();
+    }
+
+    // 嵌套模块
+    pub mod nested {
+        pub fn function() {
+            println!("called my_mod::nested::function");
+        }
+
+        #[allow(dead_code)]
+        fn private_function(){
+            println!("called my_mod::nested::private_function");
+        }
+
+        // pub(in path) 语法表示这个公共方法只在 path 下面可见
+        pub(in crate::my_mod) fn public_function_in_my_mod() {
+            println!("called my_mod::nested::public_function_in_my_mod");
+            public_function_in_nested();
+        }
+
+        // pub(self) 语法表示只能在当前模块中可见
+        pub(self) fn public_function_in_nested() {
+            println!("called my_mod::nested::public_function_in_nested");
+        }
+
+        // pub(super) 语法表示只在父模块中可见
+        pub(super) fn public_function_in_super_mod() {
+            println!("called my_mod::nested::public_function_in_super_mod");
+        }
+    }
+
+    pub fn call_public_function_in_my_mod(){
+        println!("called my_mod::call_public_function_in_my_mod");
+        nested::public_function_in_my_mod();
+        print!("> ");
+        nested::public_function_in_super_mod();
+    }
+
+    // 只在当前的包中可见
+    pub(crate) fn public_function_in_crate() {
+        println!("called my_mod::public_function_in_crate");
+    }
+
+    // 私有的嵌套模块
+    mod private_nested {
+        pub fn function(){
+            println!("called my_mod::private_nested");
+        }
+    }
+
+}
+
+
+fn main() {
+    // 调用公共的方法
+    my_mod::function();
+    my_mod::indirect_access();
+    my_mod::nested::function();
+    my_mod::call_public_function_in_my_mod();
+
+    // 在同个包下可以随地调用
+    my_mod::public_function_in_crate();
+    // 只能在 path (crate::my_mod) 中调用
+    // my_mod::nested::public_function_in_my_mod();
+
+    // 公共模块下的私有方法也不能调用
+    // my_mod::private_function();
+    // my_mod::nested::private_function();
+
+    // 私有的模块就算是公共方法也不能调用
+   // my_mod::private_nested::function();
+}
+```
+
+#### 结构可视化
+结构对其字段具有额外的可见性。可见性默认为私有，并且可以使用 pub 修饰符覆盖。这种可见性仅在从定义它的模块外部访问结构时才重要，并且具有隐藏信息（封装）的目标。
+```
+mod my {
+    // 定义一个公共的结构体，并且拥有一个公开泛型的字段
+    pub struct OpenBox<T> {
+        pub contents: T,
+    }
+
+    // 定义一个公开的结构体，拥有一个私有的泛型字段
+    pub struct CloseBox<T> {
+        contents: T,
+    }
+
+    impl <T> CloseBox<T> {
+        // 公共的构造方法
+        pub fn new(contents:T) -> CloseBox<T> {
+            CloseBox{contents:contents}
+        }
+    }
+}
+
+fn main() {
+   let open_box = my::OpenBox{contents: "public information"};
+   println!("the open box:{}", open_box.contents);
+
+   // 无法使用字段名直接构造类型
+   // let close_box = my::CloseBox{contents: "classified information"};
+    // 只能通过公开的构造方法创建
+   let close_box = my::CloseBox::new("classified information");
+   // 无法获取私有的字段
+   、、println!("the closed box:{}", close_box.contents);
 }
 ```
