@@ -5,7 +5,7 @@
 
 - [安装](#安装)
 - [编译](#编译)
-- [Rust包和crate以及模块](#Rust包和crate以及模块)
+- [Cargo包管理](#Cargo包管理)
 - [语法](#语法)
   - [表达式](#表达式)
   - [注释方式](#注释方式)
@@ -25,7 +25,11 @@
   - [流控制](#流控制) 
   - [闭包](#闭包)                       
   - [模块](#模块)
-
+  - [属性(attributes)](#属性(attributes))
+- [crates](#crates)
+- [Cargo](#Cargo)
+- [测试](#测试)
+- [构建脚本](#构建脚本)
 ## 安装
 
 进入官网 `https://www.rust-lang.org/tools/install` 或者用下面的脚本安装     
@@ -51,17 +55,6 @@ fn main(){
 ➜   ./hello-world 
 hello world
 ```
-
-## Rust包和crate以及模块
-
-crate 是一个二进制项/ 库， rust编译以crate root源文件为起点，包中包含一个Cargo.toml 描述如何构建crate.
-使用 `cargo new project-name` 创建一个新的项目
-```
-├── Cargo.toml
-└── src
-    └── main.rs
-```
-Cargo 遵循一个约定 src/main.rs是一个与包同名二进制crate的根，如果包中同时包含src/main.rs, src/lib.rs 表示拥有多个与包同名的crate， 每个src/bin 文件都会被编译成独立的库
 
 ## 语法
 
@@ -191,6 +184,9 @@ fn analyze_slice(slice: &[i32]){
     println!("the slice has {} elements", slice.len());
 }
 ```
+
+### 泛型
+
 
 ### 赋值
 ```
@@ -812,3 +808,201 @@ fn main() {
    、、println!("the closed box:{}", close_box.contents);
 }
 ```
+
+#### use
+use 声明可用于将完整路径绑定到新名称，以便于访问， 也可以用 usr aaa::bbb::ccc as abc 来命名。
+
+#### self 和 super 
+可以在路径中使用 super 和 self 关键字来消除访问项目时的歧义，并防止对路径进行不必要的硬编码。
+
+#### 文件层次结构
+```
+|-- my
+|   |-- inaccessible.rs
+|   |-- mod.rs
+|   `-- nested.rs
+`-- split.rs
+```
+In split.rs:
+```
+//此声明将查找名为 `my.rs` 或 `my/mod.rs` 的文件，并将其内容插入到此作用域下名为 `my` 的模块中
+mod my;
+
+fn function() {
+    println!("called `function()`");
+}
+
+fn main() {
+    my::function();
+
+    function();
+
+    my::indirect_access();
+
+    my::nested::function();
+}
+```
+
+## 属性(attributes)
+属性的作用：
+- 代码的条件编译 
+- 设置 crate 名称、版本和类型（二进制或库） 
+- 禁用 lints（警告） 
+- 启用编译器功能（宏、全局导入等） 
+- 链接到外国图书馆 
+- 将函数标记为单元测试 
+- 标记将成为基准的函数
+当属性应用于整个 crate 时，它​​们的语法是 #![crate_attribute]，当它们应用于模块或项目时，语法是 #[item_attribute]（注意缺少的 bang ！）
+属性可以采用不同语法的参数：
+- `#[attribute = "value"]`
+- `#[attribute(key = "value")]`
+- `#[attribute(value)]`
+属性可以有多个值，也可以分成多行：
+```
+#[attribute(value, value2)]
+
+#[attribute(value, value2, value3,
+            value4, value5)]
+```
+
+禁用 lint 的未使用代码警告 `#[allow(dead_code)]`        
+cargo_type 和 cargo_name 属性告诉编译器crate的类型和名称，但对到 cargo 和包管理无效
+
+两种cfg属性
+- `#[cfg]` 写在函数上边声明, 启用条件编译
+- `cfg!` 只返回 true/false 可以写在代码里用 if-else 判断
+
+```
+#[cfg(target_os = "linux")]
+fn are_you_on_linux() {
+    println!("You are running linux!");
+}
+
+#[cfg(not(target_os = "linux"))]
+fn are_you_on_linux() {
+    println!("You are *not* running linux!");
+}
+
+fn main() {
+    are_you_on_linux();
+
+    println!("Are you sure?");
+    if cfg!(target_os = "linux") {
+        println!("Yes. It's definitely linux!");
+    } else {
+        println!("Yes. It's definitely *not* linux!");
+    }
+}
+```
+
+## Crates
+crate 是 Rust 中的编译单元。每当调用 rustc some_file.rs 时， some_file.rs 被视为 crate 文件。如果 some_file.rs 中有 mod 声明，那么模块文件的内容将插入到 crate 文件中 mod 声明所在的位置，然后再运行编译器。换句话说，模块不会被单独编译，只有 crates 被编译。
+crate 可以编译成二进制文件或库。默认情况下，rustc 会从 crate 生成二​​进制文件。可以通过将 --crate-type 标志传递给 lib 来覆盖此行为。
+
+创建一个库
+```
+pub fn public_function() {
+    println!("called rary's public_function");
+}
+
+fn private_function() {
+    println!("called rary's private_function");
+}
+
+pub fn indirect_access() {
+    println!("called rary's indirect_access");
+    private_function();
+}
+```
+
+编译成一个库
+```
+ rustc --crate-type=lib library.rs
+
+ 生成了一个 liblibrary.rlib 的二进制文件
+```
+库以“lib”为前缀，默认情况下它们以其 crate 文件命名，但是可以通过将 --crate-name 选项传递给 rustc 或使用 crate_name 属性来覆盖此默认名称。
+
+使用 rustc --extern 标志来引入一个库。然后将其所有项目导入与库名称相同的模块下
+
+rustc executable.rs --extern rary=library.rlib --edition=2018 && ./executable 
+
+```
+fn main() {
+    rary::public_function();
+
+    // Error! `private_function` is private
+    //rary::private_function();
+
+    rary::indirect_access();
+}
+```
+
+## Cargo
+cargo 是包管理工具，官方文档 https://doc.rust-lang.org/cargo/
+
+#### cargo 使用
+创建一个 rust 项目
+```
+// 一个二进制
+cargo new my_project
+
+my_project
+├── Cargo.toml
+└── src
+    └── main.rs
+
+// 一个库
+cargo new --lib foo
+
+my_library
+├── Cargo.toml
+└── src
+    └── lib.rs
+```
+
+main.rs 是新项目的根源文件——没有什么新东西。 Cargo.toml 是该项目的 cargo 配置文件。如果想引入第三方包，只要在 dependencies 里添加就可以了。
+```
+[package]
+name = "my_project" # 项目的名称
+version = "0.1.0"  # 使用 Semantic Versioning 的 crate 版本号。
+edition = "2021" 
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "2.27.1" # 从 crates.io 引入
+rand = { git = "https://github.com/rust-lang-nursery/rand" } # 从线上引入
+bar = { path = "../bar" } # 从本地引入
+```
+为了构建我们的项目，我们可以在项目目录（包括子目录）的任何地方执行 cargo build。我们也可以做 cargo run 来构建和运行。请注意，这些命令将解决所有依赖项，如果需要下载 crate，并构建所有内容，包括您的 crate。 （请注意，它只重建尚未构建的内容，类似于 make)
+
+如果想要编译多个二进制文件，只要在 src 目录下创建一个 bin 目录就可以了, 执行时需要指定二进制名称 `cargo run --bin my_bin`
+
+## 测试
+在rust项目里，和 src 目录同级创建一个 tests 目录, 然后把测试的文件放到这里面,每个文件都是一个单独的集成测试, 然后使用 cargo test (全部测试) 或 cargo test test_foo(匹配测试) 来进行测试, 提醒一句：Cargo 可能会同时运行多个测试，因此请确保它们不会相互竞争。
+```
+mod tests {
+    #[test]
+    fn test_1() {
+        println!("test_1");
+    }
+
+    #[test]
+    fn test_2() {
+        println!("test_2");
+    }
+}
+```
+
+## 构建脚本
+要将构建脚本添加到您的包中，可以在 Cargo.toml 中指定
+```
+[package]
+...
+build = "build.rs"
+```
+
+构建脚本只是另一个 Rust 文件，它将在编译包中的任何其他内容之前被编译和调用。因此，它可用于满足您的 crate 的先决条件。
+Cargo 通过此处指定的可以使用的环境变量为脚本提供输入。 
+该脚本通过标准输出提供输出。打印的所有行都写入到 `target/debug/build/<pkg>/output`。此外，以 cargo: 为前缀的行将由 Cargo 直接解释，因此可用于定义包编译的参数。 如需进一步的规范和示例，请阅读 Cargo 规范。
