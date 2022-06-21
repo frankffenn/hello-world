@@ -2,7 +2,9 @@
 
 - [数据类型](#数据类型)
 - [函数](#函数)
-- [结构控制](#结构控制)
+- [可视范围](#可视范围)
+- [回退函数](#回退函数)
+- [流程控制](#流程控制)
 - [循环](#循环)
 - [报错控制](#报错控制)
 - [函数修改器](#函数修改器)
@@ -13,6 +15,7 @@
 - [枚举](#枚举)
 - [事件](#事件)
 - [继承](#继承)
+- [转账](#转账)
 - 代理合约 - TODO
 
 
@@ -36,10 +39,15 @@ contract DataType {
     address public addr = 0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199;
     bytes32 public byte32 = "";
 
-
     // 使用 constant 常量也可以节省调用 gas
     address public constant ADDR_1 = 0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199;
     address public ADDR_2 = 0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199;
+
+    // immutable 不可变量可以使变量成为常量，节省 gas 费, 也可以在构造函数里赋值
+    address public immutable owner = msg.sender;
+
+    // payable 修饰地址使这个地址可以接收eth或转账
+    address payable public owner = payable(msg.sender);
 }
 ```
 
@@ -74,7 +82,33 @@ contract Function {
     }
 }
 ```
-## 结构控制
+## 可视范围
+- `private` 只有内部可见 
+- `internal` 内部和被继承的函数可见
+- `public ` 外部和内部可见
+- `external` 只有外部可见，只能由其他合约调用
+
+## 回退函数
+- `fallback` 当调用合约中一个不存在的函数或者调用空方法，亦或直接使用合约地址的内置函数 transfer() 或者 send() 时，都会执行目标合约的fallback 函数
+- `receive`  如果只需要接收 Eth, 而不需要处理函数调用失败，用 receive 就够了
+
+如果同时有`fallback` 和 `receive` 方法时, 没有 msg.data 调用 `receive` 方法，有 msg.data 的调用 `fallback`, 如果没有 `receive` 方法，那就会调用 `fallback`
+
+```
+contract MyCallback {
+    event Log(string func, address caller, uint value, bytes data);
+
+    fallback() external payable {
+        emit Log("fallback", msg.sender, msg.value, msg.data);
+    }
+
+    receive() external payable {
+        emit Log("receive", msg.sender, msg.value, "");
+    }
+}   
+```
+
+## 流程控制
 - if-else 和 javescript 里的语法相似
 ```
 if (x) < 10 {
@@ -360,7 +394,7 @@ contract Event {
 }
 ```
 
-##　继承
+## 继承
 
 继承可以避免重复写代码，使用 `is` 关键字, 多线继承要把简单的写在前面
 
@@ -391,4 +425,142 @@ contract Top is Root {
     }
 }
 
+```
+## 转账
+- `transfer` 2300 gas， 失败会 revert
+- `send`  2300 gas, 返回是否成功
+- `call` all gas, 返回是否成功和数据，有重入攻击风险
+
+```
+contract MyCallback {
+    event Log(string func, address caller, uint value, bytes data);
+
+    fallback() external payable {}
+    receive() external payable {}
+ 
+    function send() public payable {
+        // 向当前合约转账
+        // transfer 方法
+        payable(this).transfer(msg.value);
+
+        // send 方法
+        bool suc = payable(this).send(msg.value);
+        require(suc, "not success");
+        
+        // call 方法
+        (bool success, ) = payable(this).call{value:msg.value}("");
+        require(success, "not success");
+    }
+
+    function getBalance() public view returns (uint256) {
+        // 获取当前合约地址
+        return address(this).balance;
+    }
+}   
+```
+
+## 接口合约
+
+使用 `interface` 来创建一个接口类，只要定义好方法名和参数返回值即可，调用时传入实际部署的合约地址。
+
+```
+interface ICounter {
+    function count() external view returns (uint);
+    function inc() external;
+} 
+
+contract CallInterface{
+    uint public count;
+
+    function example(address _counter) external {
+        ICounter(_counter).inc();
+        count = ICounter(_counter).count();
+    }
+}
+
+```
+
+## 低级调用call
+```
+contract TestCall {
+    string public message;
+    uint public x;
+
+    fallback() external {}
+
+    function foo(string memory _message, uint _x) external payable returns (bool, uint) {
+        message = _message;
+        x = _x;
+        return (true, 666);
+    }
+}
+
+
+contract Call {
+    bytes public data;
+    function foo(address _address) external payable {
+        // 这里的 abi.encodeSignature 里面参数 uint 必须写成 256 位
+        (bool suc, bytes memory _data) = _address.call{value: 100, gas: 21000}(abi.encodeWithSignature("foo(string, uint256)","invoke call", 6666));
+        require(suc, "call failed");
+        data = _data;
+    }
+}
+```
+
+## 委托调用合约
+delegateCall 委托调用跟 call 写法一样，只不过委托调用不修改被调用的合约，而是更新调用者合约的值， 被调用合约的参数变量必须与调用者合约的参数变量对齐(也就是说参数顺序、类型必须一样)。
+
+```
+contract TestDelegateCall {
+    address public sender;
+    uint public x;
+    uint public values;
+
+    function setVars(uint _x) external payable {
+        sender = msg.sender;
+        values = msg.value;
+        x = _x;
+    }
+}
+
+
+contract DelegateCall {
+    address public sender;
+    uint public x;
+    uint public values111;
+
+    function delegateCall(address _test) external payable{
+        (bool success, ) = _test.delegatecall(abi.encodeWithSignature("setVars(uint256)", 666));
+        require(success, "call failed");
+    }
+
+    // 第二种调用的方法，适用 call, 不过好像 gas 会偏高？
+    function delegateCall2(address _test) external payable {
+        (bool success, ) = _test.delegatecall(abi.encodeWithSelector(TestDelegateCall.setVars.selector, 777));
+        require(success, "call failed");
+    }
+}
+```
+## 工厂合约
+
+```
+contract Account{
+    address public owner;
+    address public bank;
+
+    constructor(address _owner) payable {
+        owner = _owner;
+        bank = msg.sender;
+    }
+}
+
+
+contract AccountFactory {
+    Account[] public accounts;
+
+    function createAccount(address _address) external payable {
+        Account account = new Account{value:0}(_address);
+        accounts.push(account);
+    }
+}
 ```
