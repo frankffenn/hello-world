@@ -377,6 +377,30 @@ func (m *Metamon) Mint() error {
 	return nil
 }
 
+func (m *Metamon) ResetMonsterEXP(monsterId string) error {
+	params := map[string]string{
+		"address": m.address,
+		"nftId":   monsterId,
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(resetMonstEXPURL)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return errors.New("response err")
+	}
+
+	var ret Response
+	if err := json.Unmarshal(resp.Body(), &ret); err != nil {
+		return err
+	}
+
+	log.Println("monster reset EXP result: ", ret.Code)
+	return nil
+}
+
 func main() {
 	msg := fmt.Sprintf("LogIn-%s", uuid.New())
 	m := New(os.Getenv("WALLET_PRIVATE_KEY"))
@@ -415,6 +439,14 @@ func main() {
 			monsters, err := m.GetObjects(monster.Owner, monster.Id, battleLevel)
 			if err != nil {
 				log.Fatalln(err)
+			}
+
+			if monster.Level >= 60 && monster.Exp >= 395 {
+				fmt.Println("monster need to reset EXP")
+				err := m.ResetMonsterEXP(monster.Id)
+				if err != nil {
+					log.Fatalln(err)
+				}
 			}
 
 			sort.Slice(monsters, func(i, j int) bool {

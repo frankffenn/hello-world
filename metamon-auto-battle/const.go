@@ -326,6 +326,10 @@ const (
 	checkBagURL = "https://metamon-api.radiocaca.com/usm-api/checkBag"
 
 	composeMonsterEggURL = "https://metamon-api.radiocaca.com/usm-api/composeMonsterEgg"
+
+	//address: 0xe003B2Fb03F3126347afDBba460ED39e57F9588d
+	//nftId: 947068
+	resetMonstEXPURL = "https://metamon-api.radiocaca.com/usm-api/resetMonster"
 )
 
 type Response struct {
