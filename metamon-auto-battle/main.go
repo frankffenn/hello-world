@@ -428,10 +428,18 @@ func main() {
 
 		for i := 0; i < int(monster.Tear); i++ {
 			if exp >= monster.ExpMax {
-				if err := m.UpdateMonster(monster.Id); err != nil {
-					log.Println(err)
+				if monster.Level >= 60 {
+					fmt.Println("monster need to reset EXP")
+					err := m.ResetMonsterEXP(monster.Id)
+					if err != nil {
+						log.Fatalln(err)
+					}
 				} else {
-					exp = 0
+					if err := m.UpdateMonster(monster.Id); err != nil {
+						log.Println(err)
+					} else {
+						exp = 0
+					}
 				}
 			}
 
@@ -439,14 +447,6 @@ func main() {
 			monsters, err := m.GetObjects(monster.Owner, monster.Id, battleLevel)
 			if err != nil {
 				log.Fatalln(err)
-			}
-
-			if monster.Level >= 60 && monster.Exp >= 395 {
-				fmt.Println("monster need to reset EXP")
-				err := m.ResetMonsterEXP(monster.Id)
-				if err != nil {
-					log.Fatalln(err)
-				}
 			}
 
 			sort.Slice(monsters, func(i, j int) bool {
