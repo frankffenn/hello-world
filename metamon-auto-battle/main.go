@@ -377,6 +377,158 @@ func (m *Metamon) Mint() error {
 	return nil
 }
 
+func (m *Metamon) ResetMonsterEXP(monsterId string) error {
+	params := map[string]string{
+		"address": m.address,
+		"nftId":   monsterId,
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(resetMonstEXPURL)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return errors.New("response err")
+	}
+
+	var ret Response
+	if err := json.Unmarshal(resp.Body(), &ret); err != nil {
+		return err
+	}
+
+	log.Println("monster reset EXP result: ", ret.Code)
+	return nil
+}
+
+func (m *Metamon) GetTeamList() ([]*Team, error) {
+	params := map[string]string{
+		"address":    m.address,
+		"page":       "1",
+		"pageSize":   "20",
+		"orderField": "monsterNum",
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(teamListURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, errors.New("response err")
+	}
+
+	var ret TeamListResponse
+	if err := decodeResponse(resp.Body(), &ret); err != nil {
+		return nil, err
+	}
+
+	return ret.TeamList, nil
+}
+
+func (m *Metamon) GetScreenMetamon(teamId, scaThreshold string) (*ScreenMetamon, error) {
+	params := map[string]string{
+		"address":      m.address,
+		"scaThreshold": scaThreshold,
+		"teamId":       teamId,
+		"minSca":       "-1",
+		"nftId":        "-1",
+		"pageSize":     "50",
+	}
+
+	resp, err := m.c.R().SetQueryParams(params).Post(screenMetamonURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, errors.New("response err")
+	}
+
+	var ret ScreenMetamon
+	if err := decodeResponse(resp.Body(), &ret); err != nil {
+		return nil, err
+	}
+
+	return &ret, nil
+}
+
+func (m *Metamon) JoinTeam(teamId string, ids []*nftId) error {
+	req := &JoinRequest{
+		Address:  m.address,
+		Metamons: ids,
+		TeamId:   teamId,
+	}
+
+	resp, err := m.c.R().SetBody(req).Post(joinTeamUrl)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return errors.New("response err")
+	}
+
+	var ret Response
+	if err := json.Unmarshal(resp.Body(), &ret); err != nil {
+		return err
+	}
+
+	log.Println("Join team result: ", ret.Code)
+	return nil
+}
+
+func (m *Metamon) tryToJoinTeam() error {
+	teamList, err := m.GetTeamList()
+	if err != nil {
+		return err
+	}
+
+	bagItems, err := m.GetBag()
+	if err != nil {
+		return err
+	}
+
+	for _, item := range bagItems {
+		if item.Type != 6 {
+			continue
+		}
+		bpNum, _ := strconv.ParseInt(item.Number, 10, 64)
+		if bpNum > 0 {
+			for _, team := range teamList {
+				if team.LockTeam {
+					continue
+				}
+
+				if team.MonsterScaThreshold > 305 {
+					continue
+				}
+
+				threshold := strconv.FormatInt(team.MonsterScaThreshold, 10)
+				metamon, err := m.GetScreenMetamon(team.Id, threshold)
+				if err != nil {
+					return err
+				}
+
+				var nftIds []*nftId
+				for _, item := range metamon.Monsters {
+					nftIds = append(nftIds, &nftId{
+						nftId: item.Id,
+					})
+				}
+
+				if err := m.JoinTeam(team.Id, nftIds); err != nil {
+					return err
+				}
+
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	msg := fmt.Sprintf("LogIn-%s", uuid.New())
 	m := New(os.Getenv("WALLET_PRIVATE_KEY"))
@@ -397,6 +549,9 @@ func main() {
 		return
 	}
 
+	// 元兽王国
+	m.tryToJoinTeam()
+
 	for _, monster := range myMonsters {
 		var winCount int64
 
@@ -404,10 +559,18 @@ func main() {
 
 		for i := 0; i < int(monster.Tear); i++ {
 			if exp >= monster.ExpMax {
-				if err := m.UpdateMonster(monster.Id); err != nil {
-					log.Println(err)
+				if monster.Level >= 60 {
+					fmt.Println("monster need to reset EXP")
+					err := m.ResetMonsterEXP(monster.Id)
+					if err != nil {
+						log.Fatalln(err)
+					}
 				} else {
-					exp = 0
+					if err := m.UpdateMonster(monster.Id); err != nil {
+						log.Println(err)
+					} else {
+						exp = 0
+					}
 				}
 			}
 

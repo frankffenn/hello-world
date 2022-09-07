@@ -26,6 +26,10 @@
   - [闭包](#闭包)                       
   - [模块](#模块)
   - [属性(attributes)](#属性(attributes))
+  - [作用域规则](#作用域规则)
+  - [共性(traits)](#共性(traits))
+  - [宏规则](#宏规则)
+  - [标准库](标准库)
 - [crates](#crates)
 - [Cargo](#Cargo)
 - [测试](#测试)
@@ -104,7 +108,7 @@ rust 的基本类型默认都是只读的，不能修改，如果想要修改，
 - 元组 (1, true) 不同类型的集合
 - 切片 跟数组一样，只是不固定长度
 
-通常要使用后缀注释来指定类型，没有约束的话会,编译器会默认使用 i32 和 f64 类型
+通常要使用后缀注释来指定类型，没有约束的话会,编译器会默认使用 i32 和 f64 类型   
 () 占用0个字节      
 u8/i8 占用1个字节       
 u16/i16 占用2个字节     
@@ -186,6 +190,25 @@ fn analyze_slice(slice: &[i32]){
 ```
 
 ### 泛型
+通过使用尖括号和大写驼峰式大小写将类型参数指定为泛型：<Aaa, Bbb, ...>。 “通用类型参数”通常表示为 <T>。在 Rust 中，“泛型”还描述了任何接受一个或多个泛型类型参数 <T> 的东西。任何指定为泛型类型参数的类型都是泛型的，而其他所有类型都是具体的（非泛型的）。
+
+函数也一样，只要是泛型参数，那么这个函数就是泛型函数
+
+```
+// <T> 表示定义T为泛型，然后参数 arg:T 使用这个类型
+fn foo<T>(arg: T) { ... }
+// 当然, T也可以换成其他符合驼峰规则的字符
+fn foo<Lin>(arg: Lin) { ... }
+
+// 泛型函数
+struct SGen<T>(T); // 泛型 SGen
+
+fn not_generics(_s: SGen<i32>) // 非泛型函数
+fn generics(_s: SGen<T>) {} // 泛型函数
+
+// impl 使用泛型语法
+impl<T> GenericVal<T> {}
+```
 
 
 ### 赋值
@@ -410,6 +433,170 @@ fn main() {
     println!("{:?}", vec);
 }
 ```
+
+### Box
+Rust 中的所有值默认都是堆栈分配的。可以通过创建 Box<T> 将值装箱（在堆上分配）。盒子是指向 T 类型的堆分配值的智能指针。当盒子超出范围时，它的析构函数被调用，内部对象被销毁，堆上的内存被释放。
+
+装箱类型（box）使我们可以将数据存储在堆上，并在栈中保留一个指向堆数据的指针,装箱会在离开自己的作用域时被释放,包括指针和堆上的数据。
+
+使用场景
+当拥有一个无法在编译时确定大小的类型，但又想要在一个要求固定尺寸的上下文环境中使用这个类型的值时。
+当需要传递大量数据的所有权，但又不希望产生大量数据的复制行为时。
+当希望拥有一个实现了指定trait的类型值，但又不关心具体的类型时
+
+```
+enum List {
+    Cons(i32, Box<List>),
+    Nil,
+}
+​
+fn main() {
+    let l = List::Cons(1, Box::new(List::Cons(2, Box::new(List::Nil))));
+}
+```
+
+### Vectors
+向量是可调整大小的数组。像切片一样，它们的大小在编译时是未知的，但它们可以随时增长或缩小。使用 3 个参数表示一个向量：
+- pointer to the data // 指向堆地址的指针
+- length
+- capacity
+
+Vector 主要有两种初始化方式：
+使用 `vec!` 宏
+使用 `Vec::new()` 方法
+
+有了静态分配大小的 Array，以及可以动态增减元素的 Vector，为什么还有一个叫做 Slice 的东西呢？按照官方文档的说明，Slice是一个指向底层 Array 或 Vector 的视图，可以实现安全、高效的数据访问而不会发生内存拷贝。一般来说我们都不会直接创建 Slice ，而是从已有的 Array 或 Vector 创建 Slice。
+
+### String
+Rust 中有两种类型的字符串：String 和 &str。
+`String` 存储为字节向量 (Vec<u8>)，但保证始终是有效的 UTF-8 序列。字符串是堆分配的、可增长的且不以空值终止。
+`&str` 是一个始终指向有效 UTF-8 序列的切片 (&[u8])，可用于查看字符串，就像 &[T] 是查看 Vec<T> 一样。
+这有点像 Vector 和 Slice 的对应关系关系。在内存中，&str也包括指向实际数据位置的指针和长度属性。
+
+### Option
+有时需要捕获程序某些部分的失败而不是调用 panic!；这可以使用 Option 枚举来完成。
+Option<T> 枚举有两种变体： 
+`None`，表示失败或缺乏价值
+`Some(value)`，一个元组结构，它包装了一个类型为 T 的值。
+
+```
+// An integer division that doesn't `panic!`
+fn checked_division(dividend: i32, divisor: i32) -> Option<i32> {
+    if divisor == 0 {
+        // Failure is represented as the `None` variant
+        None
+    } else {
+        // Result is wrapped in a `Some` variant
+        Some(dividend / divisor)
+    }
+}
+
+// This function handles a division that may not succeed
+fn try_division(dividend: i32, divisor: i32) {
+    // `Option` values can be pattern matched, just like other enums
+    match checked_division(dividend, divisor) {
+        None => println!("{} / {} failed!", dividend, divisor),
+        Some(quotient) => {
+            println!("{} / {} = {}", dividend, divisor, quotient)
+        },
+    }
+}
+
+fn main() {
+    try_division(4, 2);
+    try_division(1, 0);
+
+    // Binding `None` to a variable needs to be type annotated
+    let none: Option<i32> = None;
+    let _equivalent_none = None::<i32>;
+
+    let optional_float = Some(0f32);
+
+    // Unwrapping a `Some` variant will extract the value wrapped.
+    println!("{:?} unwraps to {:?}", optional_float, optional_float.unwrap());
+
+    // Unwrapping a `None` variant will `panic!`
+    println!("{:?} unwraps to {:?}", none, none.unwrap());
+}
+```
+
+### Result
+我们已经看到 Option 枚举可以用作可能失败的函数的返回值，其中 None 可以返回表示失败。但是，有时表达操作失败的原因很重要。为此，我们有 Result 枚举。
+Result<T, E> 枚举有两个变体： 
+`Ok(value)` 表示操作成功，并将操作返回的值包装起来。 （值的类型为 T） 
+`Err(why)`，表示操作失败，并包装了为什么，这（希望）解释了失败的原因。 （为什么有E型）
+
+```
+pub fn div(x: f64, y: f64) -> MathResult {
+    if y == 0.0 {
+        Err(MathError::DivisionByZero)
+    } else {
+        // This operation is valid, return the result wrapped in `Ok`
+        Ok(x / y)
+    }
+}
+
+fn op(x: f64, y: f64) -> f64 {
+    // This is a three level match pyramid!
+    match checked::div(x, y) {
+        Err(why) => panic!("{:?}", why),
+        Ok(ratio) => {},
+    }
+}
+```
+
+使用 match 链接结果可能会变得非常混乱；幸运的是，?运算符可用于使事情再次变得漂亮。 `?`用于返回 Result 的表达式的末尾，等效于 match 表达式，其中 Err(err) 分支扩展为提前返回 Err(From::from(err)) 和 Ok(ok) 分支展开为 ok 表达式。
+```
+// Intermediate function
+fn op_(x: f64, y: f64) -> MathResult {
+    // if `div` "fails", then `DivisionByZero` will be `return`ed
+    let ratio = div(x, y)?;
+
+    // if `ln` "fails", then `NonPositiveLogarithm` will be `return`ed
+    let ln = ln(ratio)?;
+
+    sqrt(ln)
+}
+
+pub fn op(x: f64, y: f64) {
+    match op_(x, y) {
+        Err(why) => panic!("{}", match why {
+            MathError::NonPositiveLogarithm
+                => "logarithm of non-positive number",
+            MathError::DivisionByZero
+                => "division by zero",
+            MathError::NegativeSquareRoot
+                => "square root of negative number",
+        }),
+        Ok(value) => println!("{}", value),
+    }
+}
+```
+### HashMap
+与向量一样，HashMap 是可增长的，但是当 HashMap 有多余的空间时，它们也可以自行收缩。可以使用 HashMap::with_capacity(uint) 创建具有一定起始容量的 HashMap，也可以使用 HashMap::new() 获取具有默认初始容量的 HashMap（推荐）。
+```
+let mut contacts = HashMap::new();
+
+contacts.insert("Daniel", "798-1364");
+contacts.insert("Ashley", "645-7689");
+contacts.insert("Katie", "435-8291");
+contacts.insert("Robert", "956-1745");
+
+match contacts.get(&"Daniel") {
+    Some(&number) => println!("Calling Daniel: {}", call(number)),
+    _ => println!("Don't have Daniel's number."),
+}
+
+// `HashMap::iter()` returns an iterator that yields 
+// (&'a key, &'a value) pairs in arbitrary order.
+for (contact, &number) in contacts.iter() {
+    println!("Calling {}: {}", contact, call(number)); 
+}
+```
+#### Rc
+
+请注意，f32 和 f64 没有实现 Hash，可能是因为浮点精度错误会使将它们用作 hashmap 键非常容易出错。
+
 
 ### From 和 Into 特性
 From 提供了类型转换的功能，规定如果进行两个不同的类型进行转换
@@ -843,7 +1030,7 @@ fn main() {
 }
 ```
 
-## 属性(attributes)
+### 属性(attributes)
 属性的作用：
 - 代码的条件编译 
 - 设置 crate 名称、版本和类型（二进制或库） 
@@ -894,6 +1081,84 @@ fn main() {
     }
 }
 ```
+
+### 作用域规则
+
+### 共性(traits)
+Trait是对多种类型之间的共性进行的抽象，跟 go 的　interface 类型，规定定义哪些方法就可以实现它。     
+```
+struct Tiger{
+    color: String,
+    name: String,
+}
+
+// 定义猫科动物特性
+trait Cat {
+    fn new(name: String, color: String) -> Self;
+
+    // 方法签名, 即规定方法名和入参出参
+    fn name(&self);
+    fn color(&self);
+
+    // 可以定义默认的方法
+    fn talk(&self) {
+        println!("baaaaah this is with");
+    }
+}
+
+// 为 tiger 实现 cat 的特性
+impl Cat for Tiger {
+    fn new(name: String, color: String) -> Tiger {
+        Tiger {name: name, color: color}
+    }
+
+    fn name(&self) {
+        println!("name: {}",  self.name);
+    }
+
+    fn color(&self) {
+        println!("color: {}", self.color);
+    }
+
+    fn talk(&self) {
+        println!("rewrite talk function");
+    }
+}
+
+fn main() {
+    let t = Tiger::new("laohu".to_string(), "huawen".to_string());
+
+    t.color();
+    t.name();
+    t.talk();
+}
+```
+
+#### 派生(derive)
+编译器能够通过`#[derive]` 属性为某些特征提供基本实现。以下是可派生特征的列表：    
+- Eq, PartialEq, Ord, PartialOrd    // 比较
+- Clone                             // 通过副本从 &T 创建 T
+- Copy                              // 给出类型“复制语义”而不是“移动语义”
+- Hash                              // 从 &T 计算哈希
+- Default                           // 创建数据类型的空实例
+- Debug                             // 使用 {:?} 格式化程序格式化一个值
+
+```
+#[derive(Debug)]                    // 可以打印
+#[derive(PartialEq, PartialOrd)]    // 可以比较
+struct Inches(i32);
+
+fn main() {
+    let foot = Inches(32);
+    println!("{:?}", foot);
+
+    let _is_true = foot == foot;
+}
+```
+
+#### 使用 dyn 返回特征
+细节查看文档
+
 
 ## Crates
 crate 是 Rust 中的编译单元。每当调用 rustc some_file.rs 时， some_file.rs 被视为 crate 文件。如果 some_file.rs 中有 mod 声明，那么模块文件的内容将插入到 crate 文件中 mod 声明所在的位置，然后再运行编译器。换句话说，模块不会被单独编译，只有 crates 被编译。

@@ -326,6 +326,28 @@ const (
 	checkBagURL = "https://metamon-api.radiocaca.com/usm-api/checkBag"
 
 	composeMonsterEggURL = "https://metamon-api.radiocaca.com/usm-api/composeMonsterEgg"
+
+	//address: 0xe003B2Fb03F3126347afDBba460ED39e57F9588d
+	//nftId: 947068
+	resetMonstEXPURL = "https://metamon-api.radiocaca.com/usm-api/resetMonster"
+
+	// 战斗列表
+	teamListURL = "https://metamon-api.radiocaca.com/usm-api/kingdom/teamList"
+
+	//王国的兽
+	screenMetamonURL = "https://metamon-api.radiocaca.com/usm-api/kingdom/screenMetamon"
+
+	// 加入
+	//{
+	//"address": "0xe003B2Fb03F3126347afDBba460ED39e57F9588d",
+	//"teamId": "611111111291",
+	//"metamons": [
+	//{
+	//"nftId": "947068"
+	//}
+	//]
+	//}
+	joinTeamUrl = "https://metamon-api.radiocaca.com/usm-api/kingdom/teamJoin"
 )
 
 type Response struct {
@@ -388,4 +410,44 @@ type BagItem struct {
 	Type   int64  `json:"bpType"`
 	Id     int64  `json:"id"`
 	Owner  string `json:"owner"`
+}
+
+type Team struct {
+	AverageSca          int64
+	Id                  string
+	Name                string
+	JoinPassword        string
+	LockTeam            bool
+	MonsterNum          int64
+	MonsterNumMax       int64
+	MonsterNumRarity    int64
+	MonsterScaThreshold int64
+	ShowStatus          int64
+}
+
+type TeamListResponse struct {
+	TeamList []*Team `json:"list"`
+	Page     int64
+	PageSize int64
+	Total    int64
+}
+
+type ScreenMetamon struct {
+	EachCost         int64      `json:"eachCost"`
+	minSca           int64      `json:"minSca"`
+	MonsterNumFree   int64      `json:"monsterNumFree"`
+	Monsters         []*Monster `json:"monsters"`
+	NftId            string     `json:"nftId"`
+	OverThresholdNum int64      `json:"overThresholdNum"`
+	ScaThreshold     int64      `json:"scaThreshold"`
+}
+
+type nftId struct {
+	nftId string `json:"nftId"`
+}
+
+type JoinRequest struct {
+	Address  string   `json:"address"`
+	Metamons []*nftId `json:"metamons"`
+	TeamId   string   `json:"teamId"`
 }
