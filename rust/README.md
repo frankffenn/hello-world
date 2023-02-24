@@ -25,9 +25,11 @@
   - [流控制](#流控制) 
   - [闭包](#闭包)                       
   - [模块](#模块)
-  - [属性(attributes)](#属性(attributes))
+  - [属性attributes](#属性-attributes)
   - [作用域规则](#作用域规则)
-  - [共性(traits)](#共性(traits))
+  - [共性traits](#共性-traits)
+  - [派生derive](#派生-derive)
+  - [错误处理](#错误处理)
   - [宏规则](#宏规则)
   - [标准库](标准库)
 - [crates](#crates)
@@ -1030,7 +1032,7 @@ fn main() {
 }
 ```
 
-### 属性(attributes)
+#### 属性 attributes
 属性的作用：
 - 代码的条件编译 
 - 设置 crate 名称、版本和类型（二进制或库） 
@@ -1082,9 +1084,9 @@ fn main() {
 }
 ```
 
-### 作用域规则
+#### 作用域规则
 
-### 共性(traits)
+#### 共性 traits
 Trait是对多种类型之间的共性进行的抽象，跟 go 的　interface 类型，规定定义哪些方法就可以实现它。     
 ```
 struct Tiger{
@@ -1134,8 +1136,10 @@ fn main() {
 }
 ```
 
-#### 派生(derive)
-编译器能够通过`#[derive]` 属性为某些特征提供基本实现。以下是可派生特征的列表：    
+#### 派生 derive
+编译器能够通过`#[derive]` 属性为某些特征提供基本实现。也就是说会自动生成一些基本的代码，比如格式化，排序等。
+
+以下是可派生特征的列表：    
 - Eq, PartialEq, Ord, PartialOrd    // 比较
 - Clone                             // 通过副本从 &T 创建 T
 - Copy                              // 给出类型“复制语义”而不是“移动语义”
@@ -1154,6 +1158,92 @@ fn main() {
 
     let _is_true = foot == foot;
 }
+```
+
+#### 错误处理
+```
+// 普通的错误处理
+fn default_error() {
+   let file_result = File::open("hello.txt");
+   let _file = match file_result {
+        Ok(file) => file,
+        Err(e) => panic!("open file: {}", e),
+   };
+}  
+
+fn match_error_kind() {
+    let file_result = File::open("hello.txt");
+
+    let _file = match file_resule {
+        Ok(file) => file,
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => match _file.create("hello.txt") {
+                Ok(f) => f,
+                Err(e) => panic!("create file: {}", e),
+            },
+            other_error => panic!("other error"),
+        };
+    };
+}
+
+// 使用闭包让代码更简单
+fn match_error_kind_use_colsures() {
+    let file_result = File::open("hello.txt").unwrap_or_else(|error| {
+        if error.kind() == ErrorKind::NotFound {
+            File::create("hello.txt").unwrap_or_else(|error| {
+                panic!("create file: {}", error)
+            });
+        }else {
+            panic!("open file: {}", error);
+        }
+    });
+}
+
+// 还能更简单
+// unwrap 如果程序报错，就会返回  Error,如果没错误，返回 Ok 的内容
+fn hanle_error_with_unwrap() {
+    let file_result = File::open("hello.txt").unwrap();
+}
+
+// 使用 expect 只返回有错误的
+fn hanle_error_with_expect() {
+    let file_resule = File::open("hello.txt")
+    .expect("open file error");
+}
+
+
+// 错误广播（上抛）
+fn propagating_error() -> Result<String, io::Error>{
+    let username_file_result = File::open("hello.txt");
+
+    let mut username_file = match username_file_result {
+        Ok(file) => file,
+        Err(e) => Err(e),
+    }
+
+    let mut username = String::new();
+    match username_file.read_to_string(&mut username) {
+        Ok(_) => username,
+        Err(e) => e,
+    }
+}
+
+// 使用问号操作符, 问题操作符只能返回相应类型的返回值，不同类型会报错
+// 比如下面例子必须是 Result<T, E> 类型的返回 
+fn propagating_error_with_question_mark() -> Result<String, io::Error> {
+    let username_file = File::open("hello.txt")?;
+    let mut username = String::new();
+    let username_file.read_to_string(&mut username)?;
+    Ok(username)
+}
+
+//  使用链式调用还能再简化一点
+fn propagating_error_with_question_mark_2() -> Result<String, io::Error> {
+    let mut username = String::new();
+    File::open("hello.txt")?.read_to_string(&mut username)?;
+    Ok(username)
+}
+
 ```
 
 #### 使用 dyn 返回特征
